@@ -1,4 +1,5 @@
 using System;
+using System.Net;
 using System.Text;
 using System.Reflection;
 using DataAccess;
@@ -80,7 +81,6 @@ namespace RESTDataAccess
 			throw new NotImplementedException ();
 		}
 
-
 		private Response<T> Execute<T>(RestRequest request) where T: new()
 		{
 			// TODO Make sure this is still needed, or how Exceptions should be handled.
@@ -100,15 +100,27 @@ namespace RESTDataAccess
 					}
 				};
 
-		  	RestResponse<T> r = (RestResponse<T>)_client.Execute<T> (request);
+		  	RestResponse<T> restResponse = (RestResponse<T>)_client.Execute<T> (request);
+			Response<T> response = new Response<T>();
+			response.ErrorException = restResponse.ErrorException;
+			response.ErrorMessage = restResponse.ErrorMessage;
+			response.StatusDescription = restResponse.StatusDescription;
+			response.ResponseStatus = (DataAccess.ResponseStatus)restResponse.ResponseStatus;
+			response.Content = restResponse.Data;
 
-			Response<T> re = new Response<T>();
-			re.Status = re.Status;
-			re.StatusCode = re.StatusCode;
-			re.Content = r.Data;
+			// TODO StatusCode enum needs better documentation and completion (how to handle the default case?)
+			switch (restResponse.StatusCode) {
+			case HttpStatusCode.Accepted:
+				response.StatusCode = StatusCode.Accepted;
+				break;
+			case HttpStatusCode.Ambiguous:
+				response.StatusCode = StatusCode.Ambiguous;
+				break;
+			default:
+				response.StatusCode = StatusCode.NotAvailable;
+			}
 
-
-			return re;
+			return response;
 		}
 	}
 }
