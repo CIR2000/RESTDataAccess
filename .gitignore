@@ -1,0 +1,9 @@
+bin
+obj
+Components
+*.user
+*.suo
+*.pidb
+*.userprefs
+*.Designer.cs
+*.designer.cs
