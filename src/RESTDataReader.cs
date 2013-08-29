@@ -118,6 +118,7 @@ namespace RESTDataAccess
 				break;
 			default:
 				response.StatusCode = StatusCode.NotAvailable;
+				break;
 			}
 
 			return response;
