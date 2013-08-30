@@ -5,7 +5,7 @@ using System.IO;
 using System.Globalization;
 using System.Text;
 
-namespace RESTDataAccess
+namespace DataAccess.RESTDataAccess
 {
 
 	internal class JsonDeserializer : IDeserializer

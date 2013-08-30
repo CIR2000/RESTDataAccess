@@ -6,7 +6,7 @@ using DataAccess;
 using RestSharp;
 using RestSharp.Extensions;
 
-namespace RESTDataAccess
+namespace DataAccess.RESTDataAccess
 {
 	public class RESTDataReader : DataReader
 	{
