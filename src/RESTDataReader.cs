@@ -18,19 +18,19 @@ namespace DataAccess.RESTDataAccess
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
 		/// </summary>
-		public RESTDataReader() : base(null, null) { }
+		public RESTDataReader() : this(null, null) { }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
 		/// </summary>
 		/// <param name="dataSourceName">Data source name.</param>
-		public RESTDataReader(string dataSourceName) : base(dataSourceName, null) { }
+		public RESTDataReader(string dataSourceName) : this(dataSourceName, null) { }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
 		/// </summary>
 		/// <param name="auth">Authentication.</param>
-		public RESTDataReader(Authentication auth) : base(null, auth) { }
+		public RESTDataReader(Authentication auth) : this(null, auth) { }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
