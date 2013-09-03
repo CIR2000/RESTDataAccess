@@ -72,7 +72,6 @@ namespace DataAccess.RESTDataAccess
 //			throw new NotImplementedException ();
 			var restRequest = ProcessRequestBase(request);
 			restRequest.Resource = string.Format ("/{0}/{1}/", restRequest.Resource, request.Id);
-			restRequest.DateFormat = "ddd, dd MMM yyyy HH:mm:ss UTC";
 
 			return Execute<T> (restRequest);
 		}
