@@ -2,6 +2,8 @@ using System;
 using System.Net;
 using System.Text;
 using System.Reflection;
+using System.Collections.Generic;
+using System.Runtime.Serialization;
 using DataAccess;
 using RestSharp;
 using RestSharp.Extensions;
@@ -14,6 +16,21 @@ namespace DataAccess.RESTDataAccess
 		/// The RestSharp client.
 		/// </summary>
 		private RestClient _client;
+
+        private Dictionary <Comparison, string> Ops = new Dictionary<Comparison, string>()
+        {
+ 			{ Comparison.Equal, "\"{0}\"" },
+			{ Comparison.NotEqual, "{{ \"$ne\": \"{0}\" }}" },
+			{ Comparison.GreaterThan, "{ $gt: {0} }" },
+			{ Comparison.GreaterThenOrEqual, "{ $gte: {0} }" },
+			{ Comparison.LessThan, "{ $lt: {0} }"},
+			{ Comparison.LessThanOrEqual, "{ $lte: {0} }" }
+//            { ComparisonOperator.BeginsWith, new OperatorInfo {Operator=" LIKE ", Suffix="%"}},
+//            { ComparisonOperator.Contains, new OperatorInfo {Operator=" LIKE ", Prefix="%", Suffix="%"}},
+//            { ComparisonOperator.EndsWith, new OperatorInfo {Operator=" LIKE ", Prefix="%"}},
+//            { ComparisonOperator.NotContains, new OperatorInfo {Operator=" NOT LIKE ", Prefix="%", Suffix="%"}},
+        };
+
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
@@ -56,9 +73,18 @@ namespace DataAccess.RESTDataAccess
 		/// </summary>
 		/// <param name="request">A request instance.</param>
 		/// <typeparam name="T">The type to be returned.</typeparam>
-		public override Response<T> Get<T> (GetRequest request)
+		public override Response<T> Get<T> (IGetRequest request)
 		{ 
-			return Execute<T> (ProcessRequestBase(request));
+			var restRequest = ProcessRequestBase (request);
+
+			if (request.Filters.Count > 0) {
+				// TODO assumes T is a List. Make some type checking and raise an exception if otherwise?
+				Type t = typeof(T).GetGenericArguments () [0];
+				if (request.Filters.Count > 0)
+					restRequest.AddParameter ("where", ParseFilters (request.Filters, t));
+			}
+
+			return Execute<T> (restRequest);
 		}
 
 		/// <summary>
@@ -66,7 +92,7 @@ namespace DataAccess.RESTDataAccess
 		/// </summary>
 		/// <param name="request">A request instance.</param>
 		/// <typeparam name="T">The type to be returned.</typeparam>
-		public override Response<T> Get<T>(GetRequestItem request) 
+		public override Response<T> Get<T>(IGetRequestItem request) 
 		{ 
 //			return Execute<T> (ProcessRequestBase(request));
 //			throw new NotImplementedException ();
@@ -76,7 +102,7 @@ namespace DataAccess.RESTDataAccess
 			return Execute<T> (restRequest);
 		}
 
-		private RestRequest ProcessRequestBase(RequestBase request)
+		private RestRequest ProcessRequestBase(IGetRequestBase request)
 		{
 			var restRequest = new RestRequest ();
 
@@ -91,6 +117,85 @@ namespace DataAccess.RESTDataAccess
 				_client.Authenticator = new HttpBasicAuthenticator (Authentication.UserName, Authentication.Password);
 
 			return restRequest;
+		}
+
+		protected string ParseFilters(IList<IFilter> filters, Type typeOfT)
+		{
+			Func<string>helper = null;
+
+			helper = delegate() {
+				var s = new StringBuilder ();
+				string concat = string.Empty;
+
+		        foreach (var f in filters)
+	            {
+					if (f is Filter) {
+						var filter = (Filter)f;
+
+						Func<string> fieldName = () => {
+							var propertyInfo = typeOfT.GetProperty (filter.Field);
+							Object[] myAttributes = propertyInfo.GetCustomAttributes (typeof(DataMemberAttribute), true);
+							if (myAttributes.Length > 0)
+								return ((DataMemberAttribute)myAttributes [0]).Name;
+							else
+								return propertyInfo.Name;
+						};
+
+						s.Append (concat.Length > 0 ? concat : string.Empty);
+						s.Append (string.Format (@"""{0}"": {1}", fieldName(), string.Format (Ops [filter.Comparator], filter.Value)));
+					} else if (f is FiltersGroup) { 
+						var fg = (FiltersGroup)f;
+						if (fg.Filters.Count > 0) {
+							s.Append (concat.Length > 0 ? concat : string.Empty);
+							filters = fg.Filters;
+							s.Append (helper());
+						}
+					}
+					if (f.Concatenator == Concatenation.And)
+						concat = ", ";
+					else if (f.Concatenator == Concatenation.Or)
+						concat = ", $or ";
+	            }
+				return s.Length > 0 ? s.ToString() : null;
+			};
+//			return "{ " + ParseFilters(filters, typeOfT) + " }";
+			return "{ " + helper() + " }";
+		}
+
+		private string ParseFiltersI(IList<IFilter> filters, Type typeOfT) 
+		{
+			var s = new StringBuilder ();
+			string concat = string.Empty;
+
+	        foreach (var f in filters)
+            {
+				if (f is Filter) {
+					var filter = (Filter)f;
+
+					Func<string> fieldName = () => {
+						var propertyInfo = typeOfT.GetProperty (filter.Field);
+						Object[] myAttributes = propertyInfo.GetCustomAttributes (typeof(DataMemberAttribute), true);
+						if (myAttributes.Length > 0)
+							return ((DataMemberAttribute)myAttributes [0]).Name;
+						else
+							return propertyInfo.Name;
+					};
+
+					s.Append (concat.Length > 0 ? concat : string.Empty);
+					s.Append (string.Format (@"""{0}"": {1}", fieldName(), string.Format (Ops [filter.Comparator], filter.Value)));
+				} else if (f is FiltersGroup) { 
+					var fg = (FiltersGroup)f;
+					if (fg.Filters.Count > 0) {
+						s.Append (concat.Length > 0 ? concat : string.Empty);
+						s.Append (ParseFiltersI(fg.Filters, typeOfT));
+					}
+				}
+				if (f.Concatenator == Concatenation.And)
+					concat = ", ";
+				else if (f.Concatenator == Concatenation.Or)
+					concat = ", $or ";
+            }
+			return s.Length > 0 ? s.ToString() : null;
 		}
 
 		private Response<T> Execute<T>(RestRequest request) where T: new()
