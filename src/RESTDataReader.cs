@@ -69,6 +69,7 @@ namespace DataAccess.RESTDataAccess
 		}
 
 		#endregion
+		#region Sync
 		/// <summary>
 		/// Returns one or multiple documents from the datasource.
 		/// </summary>
@@ -76,22 +77,74 @@ namespace DataAccess.RESTDataAccess
 		/// <typeparam name="T">The type to be returned.</typeparam>
 		public override Response<T> Get<T> (IGetRequest request)
 		{ 
-			var restRequest = ProcessRequestBase (request);
-
-			if (request.Filters.Count > 0) {
-				// TODO assumes T is a List. Make some type checking and raise an exception if otherwise?
-				Type t = typeof(T).GetGenericArguments () [0];
-				if (request.Filters.Count > 0)
-					restRequest.AddParameter ("where", ParseFilters (request.Filters, t));
-				if (request.Sort.Count > 0)
-					restRequest.AddParameter ("sort", ParseSort (request.Sort, t));
-				if (request.IfModifiedSince != null)
-					restRequest.AddParameter ("If-Modified-Since", request.IfModifiedSince, ParameterType.HttpHeader);
-			}
-
-			return Execute<T> (restRequest);
+			SetDataSourceName();
+			return Execute<T> (PrepareGetRequest<T>(request));
 		}
 
+		/// <summary>
+		/// Returns an individual item from the datasource.
+		/// </summary>
+		/// <param name="request">A request instance.</param>
+		/// <typeparam name="T">The type to be returned.</typeparam>
+		public override Response<T> Get<T>(IGetRequestItem request) 
+		{ 
+			SetDataSourceName ();
+			return Execute<T> (PrepareGetRequest(request));
+		}
+
+		private Response<T> Execute<T>(RestRequest request) where T: new()
+		{
+			// TODO Make sure this is still needed, or how Exceptions should be handled.
+			request.OnBeforeDeserialization = (resp) =>
+				{
+					// for individual resources when there's an error to make
+					// sure that RestException props are populated
+//					if (((int)resp.StatusCode) >= 400)
+//					{
+//						// have to read the bytes so .Content doesn't get populated
+//	                    string restException = "{{ \"RestException\" : {0} }}";
+//						var content = resp.RawBytes.AsString(); //get the response content
+//	                    var newJson = string.Format(restException, content);
+//
+//	                    resp.Content = null;
+//						resp.RawBytes = Encoding.UTF8.GetBytes(newJson.ToString());
+//					}
+				};
+
+			SetDataSourceName ();
+			return ProcessResponse ((RestResponse<T>)_client.Execute<T> (request));
+		}
+
+		#endregion
+		#region Async
+		/// <summary>
+		/// Asynchronously gets one or multiple documents from the datasource.
+		/// <param name="request">The request instance.</param>
+		/// <param name="callback">The callback function to be invoked.</param>
+		/// <typeparam name="T">The type to be returned.</typeparam>
+		public override void GetAsync<T>(IGetRequest request, Action<Response<T>, IGetRequest> callback)
+		{
+			SetDataSourceName ();
+			_client.ExecuteAsync<T> (PrepareGetRequest<T> (request), (response) => {
+				callback(ProcessResponse((RestResponse<T>)response), request);
+			});
+		}
+
+		/// <summary>
+		/// Asynchronously gets one document from the datasource.
+		/// </summary>
+		/// <param name="request">The request instance.</param>
+		/// <param name="callback">The callback function to be invoked.</param>
+		/// <typeparam name="T">The type to be returned.</typeparam>
+		public override void GetAsync<T>(IGetRequestItem request, Action<Response<T>, IGetRequestItem> callback)
+		{
+			SetDataSourceName ();
+			_client.ExecuteAsync<T> (PrepareGetRequest(request), (response) => { 
+				callback(ProcessResponse ((RestResponse<T>)response), request);
+			});
+
+		}
+		#endregion
 		#region Parsing
 		/// <summary>
 		/// Parses the list of filters into a Eve API-compatible 'where' statement.
@@ -151,27 +204,18 @@ namespace DataAccess.RESTDataAccess
 			}
 			return s.Length > 0 ? string.Format("[{0}]", s.ToString().TrimEnd(',', ' ')) : null;
 		}
-#endregion
+		#endregion
 
-		/// <summary>
-		/// Returns an individual item from the datasource.
-		/// </summary>
-		/// <param name="request">A request instance.</param>
-		/// <typeparam name="T">The type to be returned.</typeparam>
-		public override Response<T> Get<T>(IGetRequestItem request) 
-		{ 
-//			return Execute<T> (ProcessRequestBase(request));
-//			throw new NotImplementedException ();
-			var restRequest = ProcessRequestBase(request);
-			restRequest.Resource = string.Format ("/{0}/{1}/", restRequest.Resource, request.Id);
+		private void SetDataSourceName()
+		{
+			if (DataSourceName != null)
+				_client.BaseUrl = DataSourceName;
+			else
+				throw new ArgumentNullException ("DataSourceName");
 
-			if (request.IfNoneMatch != null)
-				restRequest.AddParameter ("If-None-Match", request.IfNoneMatch, ParameterType.HttpHeader);
-
-			return Execute<T> (restRequest);
 		}
 
-		private RestRequest ProcessRequestBase(IGetRequestBase request)
+		private RestRequest PrepareBaseRequest(IGetRequestBase request)
 		{
 			var restRequest = new RestRequest ();
 
@@ -188,31 +232,31 @@ namespace DataAccess.RESTDataAccess
 			return restRequest;
 		}
 
-		private Response<T> Execute<T>(RestRequest request) where T: new()
+		private RestRequest PrepareGetRequest<T>(IGetRequest request)
 		{
-			// TODO Make sure this is still needed, or how Exceptions should be handled.
-			request.OnBeforeDeserialization = (resp) =>
-				{
-					// for individual resources when there's an error to make
-					// sure that RestException props are populated
-//					if (((int)resp.StatusCode) >= 400)
-//					{
-//						// have to read the bytes so .Content doesn't get populated
-//	                    string restException = "{{ \"RestException\" : {0} }}";
-//						var content = resp.RawBytes.AsString(); //get the response content
-//	                    var newJson = string.Format(restException, content);
-//
-//	                    resp.Content = null;
-//						resp.RawBytes = Encoding.UTF8.GetBytes(newJson.ToString());
-//					}
-				};
+			var restRequest = PrepareBaseRequest (request);
 
-			if (DataSourceName != null)
-				_client.BaseUrl = DataSourceName;
-			else
-				throw new ArgumentNullException ("DataSourceName");
+			if (request.Filters.Count > 0) {
+				// TODO assumes T is a List. Make some type checking and raise an exception if otherwise?
+				Type t = typeof(T).GetGenericArguments () [0];
+				if (request.Filters.Count > 0)
+					restRequest.AddParameter ("where", ParseFilters (request.Filters, t));
+				if (request.Sort.Count > 0)
+					restRequest.AddParameter ("sort", ParseSort (request.Sort, t));
+				if (request.IfModifiedSince != null)
+					restRequest.AddParameter ("If-Modified-Since", request.IfModifiedSince, ParameterType.HttpHeader);
+			}
+			return restRequest;
+		}
+		private RestRequest PrepareGetRequest(IGetRequestItem request)
+		{
+			var restRequest = PrepareBaseRequest(request);
+			restRequest.Resource = string.Format ("/{0}/{1}/", restRequest.Resource, request.Id);
 
-			return ProcessResponse ((RestResponse<T>)_client.Execute<T> (request));
+			if (request.IfNoneMatch != null)
+				restRequest.AddParameter ("If-None-Match", request.IfNoneMatch, ParameterType.HttpHeader);
+
+			return restRequest;
 		}
 
 		private Response<T> ProcessResponse<T>(RestResponse<T> restResponse)
