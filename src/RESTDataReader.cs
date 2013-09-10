@@ -162,42 +162,6 @@ namespace DataAccess.RESTDataAccess
 			return "{ " + helper() + " }";
 		}
 
-		private string ParseFiltersI(IList<IFilter> filters, Type typeOfT) 
-		{
-			var s = new StringBuilder ();
-			string concat = string.Empty;
-
-	        foreach (var f in filters)
-            {
-				if (f is Filter) {
-					var filter = (Filter)f;
-
-					Func<string> fieldName = () => {
-						var propertyInfo = typeOfT.GetProperty (filter.Field);
-						Object[] myAttributes = propertyInfo.GetCustomAttributes (typeof(DataMemberAttribute), true);
-						if (myAttributes.Length > 0)
-							return ((DataMemberAttribute)myAttributes [0]).Name;
-						else
-							return propertyInfo.Name;
-					};
-
-					s.Append (concat.Length > 0 ? concat : string.Empty);
-					s.Append (string.Format (@"""{0}"": {1}", fieldName(), string.Format (Ops [filter.Comparator], filter.Value)));
-				} else if (f is FiltersGroup) { 
-					var fg = (FiltersGroup)f;
-					if (fg.Filters.Count > 0) {
-						s.Append (concat.Length > 0 ? concat : string.Empty);
-						s.Append (ParseFiltersI(fg.Filters, typeOfT));
-					}
-				}
-				if (f.Concatenator == Concatenation.And)
-					concat = ", ";
-				else if (f.Concatenator == Concatenation.Or)
-					concat = ", $or ";
-            }
-			return s.Length > 0 ? s.ToString() : null;
-		}
-
 		private Response<T> Execute<T>(RestRequest request) where T: new()
 		{
 			// TODO Make sure this is still needed, or how Exceptions should be handled.
