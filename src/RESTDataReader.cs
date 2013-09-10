@@ -82,6 +82,8 @@ namespace DataAccess.RESTDataAccess
 				Type t = typeof(T).GetGenericArguments () [0];
 				if (request.Filters.Count > 0)
 					restRequest.AddParameter ("where", ParseFilters (request.Filters, t));
+				if (request.Sort.Count > 0)
+					restRequest.AddParameter ("sort", ParseSort (request.Sort, t));
 			}
 
 			return Execute<T> (restRequest);
@@ -119,6 +121,12 @@ namespace DataAccess.RESTDataAccess
 			return restRequest;
 		}
 
+		/// <summary>
+		/// Parses the list of filters into a Eve API-compatible 'where' statement.
+		/// </summary>
+		/// <returns>The Eve API-compatible 'where' part.</returns>
+		/// <param name="filters">Filters.</param>
+		/// <param name="typeOfT">Type of T.</param>
 		protected string ParseFilters(IList<IFilter> filters, Type typeOfT)
 		{
 			Func<string>helper = null;
@@ -131,18 +139,9 @@ namespace DataAccess.RESTDataAccess
 	            {
 					if (f is Filter) {
 						var filter = (Filter)f;
-
-						Func<string> fieldName = () => {
-							var propertyInfo = typeOfT.GetProperty (filter.Field);
-							Object[] myAttributes = propertyInfo.GetCustomAttributes (typeof(DataMemberAttribute), true);
-							if (myAttributes.Length > 0)
-								return ((DataMemberAttribute)myAttributes [0]).Name;
-							else
-								return propertyInfo.Name;
-						};
-
 						s.Append (concat.Length > 0 ? concat : string.Empty);
-						s.Append (string.Format (@"""{0}"": {1}", fieldName(), string.Format (Ops [filter.Comparator], filter.Value)));
+						s.Append (string.Format (@"""{0}"": {1}", GetAPIFieldName(filter.Field, typeOfT), 
+						                         string.Format (Ops [filter.Comparator], filter.Value)));
 					} else if (f is FiltersGroup) { 
 						var fg = (FiltersGroup)f;
 						if (fg.Filters.Count > 0) {
@@ -156,10 +155,43 @@ namespace DataAccess.RESTDataAccess
 					else if (f.Concatenator == Concatenation.Or)
 						concat = ", $or ";
 	            }
-				return s.Length > 0 ? s.ToString() : null;
+				return s.Length > 0 ? s.ToString() : string.Empty;
 			};
-//			return "{ " + ParseFilters(filters, typeOfT) + " }";
-			return "{ " + helper() + " }";
+
+			var ret = helper ();
+			return ret != null ? "{ " + ret + " }" : null;
+		}
+
+		/// <summary>
+		/// Parses the sort list into a Eve API-compatible 'sort' statement.
+		/// </summary>
+		/// <returns>The Eve API-compatible 'sort' part.</returns>
+		/// <param name="sort">The sort list.</param>
+		/// <param name="typeOfT">Type of T.</param>
+		protected string ParseSort(IList<Sort> sort, Type typeOfT)
+		{
+			var s = new StringBuilder ();
+
+			foreach (var st in sort) {
+				s.Append (string.Format (@"(""{0}"", {1})", GetAPIFieldName(st.Field, typeOfT), st.Direction == SortDirection.Ascending ? 1 : -1));
+				s.Append (", ");
+			}
+			return s.Length > 0 ? string.Format("[{0}]", s.ToString().TrimEnd(',', ' ')) : null;
+		}
+
+		/// <summary>
+		/// Gets the API field name out of a given Type.
+		/// </summary>
+		/// <returns>The API field name.</returns>
+		/// <param name="field">Field name.</param>
+		/// <param name="typeOfT">Type of T.</param>
+		private string GetAPIFieldName(string field, Type typeOfT) {
+			var propertyInfo = typeOfT.GetProperty (field);
+			Object[] myAttributes = propertyInfo.GetCustomAttributes (typeof(DataMemberAttribute), true);
+			if (myAttributes.Length > 0)
+				return ((DataMemberAttribute)myAttributes [0]).Name;
+			else
+				return propertyInfo.Name;
 		}
 
 		private Response<T> Execute<T>(RestRequest request) where T: new()
