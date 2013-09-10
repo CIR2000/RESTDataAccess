@@ -3,7 +3,6 @@ using System.Net;
 using System.Text;
 using System.Reflection;
 using System.Collections.Generic;
-using System.Runtime.Serialization;
 using DataAccess;
 using RestSharp;
 using RestSharp.Extensions;
@@ -140,7 +139,7 @@ namespace DataAccess.RESTDataAccess
 					if (f is Filter) {
 						var filter = (Filter)f;
 						s.Append (concat.Length > 0 ? concat : string.Empty);
-						s.Append (string.Format (@"""{0}"": {1}", GetAPIFieldName(filter.Field, typeOfT), 
+						s.Append (string.Format (@"""{0}"": {1}", GetMappedFieldName(filter.Field, typeOfT), 
 						                         string.Format (Ops [filter.Comparator], filter.Value)));
 					} else if (f is FiltersGroup) { 
 						var fg = (FiltersGroup)f;
@@ -173,25 +172,10 @@ namespace DataAccess.RESTDataAccess
 			var s = new StringBuilder ();
 
 			foreach (var st in sort) {
-				s.Append (string.Format (@"(""{0}"", {1})", GetAPIFieldName(st.Field, typeOfT), st.Direction == SortDirection.Ascending ? 1 : -1));
+				s.Append (string.Format (@"(""{0}"", {1})", GetMappedFieldName(st.Field, typeOfT), st.Direction == SortDirection.Ascending ? 1 : -1));
 				s.Append (", ");
 			}
 			return s.Length > 0 ? string.Format("[{0}]", s.ToString().TrimEnd(',', ' ')) : null;
-		}
-
-		/// <summary>
-		/// Gets the API field name out of a given Type.
-		/// </summary>
-		/// <returns>The API field name.</returns>
-		/// <param name="field">Field name.</param>
-		/// <param name="typeOfT">Type of T.</param>
-		private string GetAPIFieldName(string field, Type typeOfT) {
-			var propertyInfo = typeOfT.GetProperty (field);
-			Object[] myAttributes = propertyInfo.GetCustomAttributes (typeof(DataMemberAttribute), true);
-			if (myAttributes.Length > 0)
-				return ((DataMemberAttribute)myAttributes [0]).Name;
-			else
-				return propertyInfo.Name;
 		}
 
 		private Response<T> Execute<T>(RestRequest request) where T: new()
