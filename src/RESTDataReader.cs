@@ -83,6 +83,8 @@ namespace DataAccess.RESTDataAccess
 					restRequest.AddParameter ("where", ParseFilters (request.Filters, t));
 				if (request.Sort.Count > 0)
 					restRequest.AddParameter ("sort", ParseSort (request.Sort, t));
+				if (request.IfModifiedSince != null)
+					restRequest.AddParameter ("If-Modified-Since", request.IfModifiedSince, ParameterType.HttpHeader);
 			}
 
 			return Execute<T> (restRequest);
@@ -221,6 +223,9 @@ namespace DataAccess.RESTDataAccess
 			switch (restResponse.StatusCode) {
 			case HttpStatusCode.OK:
 				response.StatusCode = StatusCode.Accepted;
+				break;
+			case HttpStatusCode.NotModified:
+				response.StatusCode = StatusCode.NotModified;
 				break;
 			case HttpStatusCode.Ambiguous:
 				response.StatusCode = StatusCode.Ambiguous;
