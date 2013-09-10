@@ -30,6 +30,7 @@ namespace DataAccess.RESTDataAccess
 //            { ComparisonOperator.NotContains, new OperatorInfo {Operator=" NOT LIKE ", Prefix="%", Suffix="%"}},
         };
 
+		#region Constructors
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
@@ -67,6 +68,7 @@ namespace DataAccess.RESTDataAccess
 			_client.BaseUrl = DataSourceName;
 		}
 
+		#endregion
 		/// <summary>
 		/// Returns one or multiple documents from the datasource.
 		/// </summary>
@@ -90,38 +92,7 @@ namespace DataAccess.RESTDataAccess
 			return Execute<T> (restRequest);
 		}
 
-		/// <summary>
-		/// Returns an individual item from the datasource.
-		/// </summary>
-		/// <param name="request">A request instance.</param>
-		/// <typeparam name="T">The type to be returned.</typeparam>
-		public override Response<T> Get<T>(IGetRequestItem request) 
-		{ 
-//			return Execute<T> (ProcessRequestBase(request));
-//			throw new NotImplementedException ();
-			var restRequest = ProcessRequestBase(request);
-			restRequest.Resource = string.Format ("/{0}/{1}/", restRequest.Resource, request.Id);
-
-			return Execute<T> (restRequest);
-		}
-
-		private RestRequest ProcessRequestBase(IGetRequestBase request)
-		{
-			var restRequest = new RestRequest ();
-
-			if (request.Resource != null)
-				restRequest.Resource = request.Resource;
-			else
-				throw new ArgumentNullException ("Resource");
-
-			if (request.Authentication != null) 
-				_client.Authenticator = new HttpBasicAuthenticator (request.Authentication.UserName, request.Authentication.Password);
-			else if (Authentication != null) 
-				_client.Authenticator = new HttpBasicAuthenticator (Authentication.UserName, Authentication.Password);
-
-			return restRequest;
-		}
-
+		#region Parsing
 		/// <summary>
 		/// Parses the list of filters into a Eve API-compatible 'where' statement.
 		/// </summary>
@@ -170,6 +141,7 @@ namespace DataAccess.RESTDataAccess
 		/// <param name="sort">The sort list.</param>
 		/// <param name="typeOfT">Type of T.</param>
 		protected string ParseSort(IList<Sort> sort, Type typeOfT)
+
 		{
 			var s = new StringBuilder ();
 
@@ -178,6 +150,42 @@ namespace DataAccess.RESTDataAccess
 				s.Append (", ");
 			}
 			return s.Length > 0 ? string.Format("[{0}]", s.ToString().TrimEnd(',', ' ')) : null;
+		}
+#endregion
+
+		/// <summary>
+		/// Returns an individual item from the datasource.
+		/// </summary>
+		/// <param name="request">A request instance.</param>
+		/// <typeparam name="T">The type to be returned.</typeparam>
+		public override Response<T> Get<T>(IGetRequestItem request) 
+		{ 
+//			return Execute<T> (ProcessRequestBase(request));
+//			throw new NotImplementedException ();
+			var restRequest = ProcessRequestBase(request);
+			restRequest.Resource = string.Format ("/{0}/{1}/", restRequest.Resource, request.Id);
+
+			if (request.IfNoneMatch != null)
+				restRequest.AddParameter ("If-None-Match", request.IfNoneMatch, ParameterType.HttpHeader);
+
+			return Execute<T> (restRequest);
+		}
+
+		private RestRequest ProcessRequestBase(IGetRequestBase request)
+		{
+			var restRequest = new RestRequest ();
+
+			if (request.Resource != null)
+				restRequest.Resource = request.Resource;
+			else
+				throw new ArgumentNullException ("Resource");
+
+			if (request.Authentication != null) 
+				_client.Authenticator = new HttpBasicAuthenticator (request.Authentication.UserName, request.Authentication.Password);
+			else if (Authentication != null) 
+				_client.Authenticator = new HttpBasicAuthenticator (Authentication.UserName, Authentication.Password);
+
+			return restRequest;
 		}
 
 		private Response<T> Execute<T>(RestRequest request) where T: new()
