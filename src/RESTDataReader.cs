@@ -19,17 +19,12 @@ namespace DataAccess.RESTDataAccess
 
         private Dictionary <Comparison, string> Ops = new Dictionary<Comparison, string>()
         {
-// 			{ Comparison.Equal, "\"{0}\"" },
  			{ Comparison.Equal, "{0}" },
 			{ Comparison.NotEqual, "{{ \"$ne\": {0} }}" },
 			{ Comparison.GreaterThan, "{{ \"$gt\": {0} }}" },
 			{ Comparison.GreaterThenOrEqual, "{{ \"$gte\": {0} }}" },
 			{ Comparison.LessThan, "{{ \"$lt\": {0} }}"},
 			{ Comparison.LessThanOrEqual, "{{ \"$lte\": {0} }}" },
-//			{ Comparison.Contains, "{{ \"$regex\": \".*{0}.*\" }}" },
-//            { ComparisonOperator.BeginsWith, new OperatorInfo {Operator=" LIKE ", Suffix="%"}},
-//            { ComparisonOperator.EndsWith, new OperatorInfo {Operator=" LIKE ", Prefix="%"}},
-//            { ComparisonOperator.NotContains, new OperatorInfo {Operator=" NOT LIKE ", Prefix="%", Suffix="%"}},
         };
 
 		#region Constructors
@@ -188,6 +183,11 @@ namespace DataAccess.RESTDataAccess
 			return ret != null ? "{ " + ret + " }" : null;
 		}
 
+		/// <summary>
+		/// Parses the filter value.
+		/// </summary>
+		/// <returns>The filter value.</returns>
+		/// <param name="filter">Filter.</param>
 		private string ParseFilterValue(Filter filter)
 		{
 			object value;
@@ -199,7 +199,10 @@ namespace DataAccess.RESTDataAccess
 			else
 				value = filter.Value;
 
-			return string.Format (Ops [filter.Comparator], value);
+			if (Ops.ContainsKey(filter.Comparator))
+				return string.Format (Ops [filter.Comparator], value);
+			else
+				throw new NotImplementedException(string.Format("{0} comparator not supported.", filter.Comparator.ToString()));
 		}
 
 		/// <summary>
