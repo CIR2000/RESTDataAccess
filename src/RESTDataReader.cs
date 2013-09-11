@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Text;
 using System.Reflection;
+using System.Globalization;
 using System.Collections.Generic;
 using DataAccess;
 using RestSharp;
@@ -18,14 +19,15 @@ namespace DataAccess.RESTDataAccess
 
         private Dictionary <Comparison, string> Ops = new Dictionary<Comparison, string>()
         {
- 			{ Comparison.Equal, "\"{0}\"" },
-			{ Comparison.NotEqual, "{{ \"$ne\": \"{0}\" }}" },
-			{ Comparison.GreaterThan, "{ $gt: {0} }" },
-			{ Comparison.GreaterThenOrEqual, "{ $gte: {0} }" },
-			{ Comparison.LessThan, "{ $lt: {0} }"},
-			{ Comparison.LessThanOrEqual, "{ $lte: {0} }" }
+// 			{ Comparison.Equal, "\"{0}\"" },
+ 			{ Comparison.Equal, "{0}" },
+			{ Comparison.NotEqual, "{{ \"$ne\": {0} }}" },
+			{ Comparison.GreaterThan, "{{ \"$gt\": {0} }}" },
+			{ Comparison.GreaterThenOrEqual, "{{ \"$gte\": {0} }}" },
+			{ Comparison.LessThan, "{{ \"$lt\": {0} }}"},
+			{ Comparison.LessThanOrEqual, "{{ \"$lte\": {0} }}" },
+//			{ Comparison.Contains, "{{ \"$regex\": \".*{0}.*\" }}" },
 //            { ComparisonOperator.BeginsWith, new OperatorInfo {Operator=" LIKE ", Suffix="%"}},
-//            { ComparisonOperator.Contains, new OperatorInfo {Operator=" LIKE ", Prefix="%", Suffix="%"}},
 //            { ComparisonOperator.EndsWith, new OperatorInfo {Operator=" LIKE ", Prefix="%"}},
 //            { ComparisonOperator.NotContains, new OperatorInfo {Operator=" NOT LIKE ", Prefix="%", Suffix="%"}},
         };
@@ -165,8 +167,7 @@ namespace DataAccess.RESTDataAccess
 					if (f is Filter) {
 						var filter = (Filter)f;
 						s.Append (concat.Length > 0 ? concat : string.Empty);
-						s.Append (string.Format (@"""{0}"": {1}", GetMappedFieldName(filter.Field, typeOfT), 
-						                         string.Format (Ops [filter.Comparator], filter.Value)));
+						s.Append (string.Format (@"""{0}"": {1}", GetMappedFieldName(filter.Field, typeOfT), ParseFilterValue(filter)));
 					} else if (f is FiltersGroup) { 
 						var fg = (FiltersGroup)f;
 						if (fg.Filters.Count > 0) {
@@ -185,6 +186,20 @@ namespace DataAccess.RESTDataAccess
 
 			var ret = helper ();
 			return ret != null ? "{ " + ret + " }" : null;
+		}
+
+		private string ParseFilterValue(Filter filter)
+		{
+			object value;
+
+			if (filter.Value is string)
+				value = string.Format ("\"{0}\"", filter.Value);
+			if (filter.Value is DateTime)
+				value = string.Format("\"{0}\"", ((DateTime)filter.Value).ToString ("ddd, dd MMM yyyy HH:mm:ss G\\MT"));
+			else
+				value = filter.Value;
+
+			return string.Format (Ops [filter.Comparator], value);
 		}
 
 		/// <summary>
