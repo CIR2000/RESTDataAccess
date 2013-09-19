@@ -34,8 +34,18 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Test.cs" />
-  </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Compile Include="RESTDataReaderTests.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\DataAccess\DataAccess.Core\DataAccess.Core.csproj">
+      <Project>{343489EB-B715-41C8-A946-BCFD0BBE1B12}</Project>
+      <Name>DataAccess.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\RESTDataAccess.Mono\RESTDataAccess.Mono.csproj">
+      <Project>{B0441C71-5E54-48D5-AF17-4388909EFE54}</Project>
+      <Name>RESTDataAccess.Mono</Name>
+    </ProjectReference>
+  </ItemGroup>
 </Project>

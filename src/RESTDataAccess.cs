@@ -10,7 +10,7 @@ using RestSharp.Extensions;
 
 namespace DataAccess.RESTDataAccess
 {
-	public class RESTDataReader : DataAccessBase
+	public class RESTDataAccess : DataAccessBase
 	{
 		/// <summary>
 		/// The RestSharp client.
@@ -32,26 +32,26 @@ namespace DataAccess.RESTDataAccess
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
 		/// </summary>
-		public RESTDataReader() : this(null, null) { }
+		public RESTDataAccess() : this(null, null) { }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
 		/// </summary>
 		/// <param name="dataSourceName">Data source name.</param>
-		public RESTDataReader(string dataSourceName) : this(dataSourceName, null) { }
+		public RESTDataAccess(string dataSourceName) : this(dataSourceName, null) { }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
 		/// </summary>
 		/// <param name="auth">Authentication.</param>
-		public RESTDataReader(Authentication auth) : this(null, auth) { }
+		public RESTDataAccess(Authentication auth) : this(null, auth) { }
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RESTDataAccess.RESTDataReader"/> class.
 		/// </summary>
 		/// <param name="dataSourceName">Data source name.</param>
 		/// <param name="auth">Authentication.</param>
-		public RESTDataReader(string dataSourceName, Authentication auth) : base (dataSourceName, auth) 
+		public RESTDataAccess(string dataSourceName, Authentication auth) : base (dataSourceName, auth) 
 		{
 			// silverlight friendly way to get current version
 			var assembly = Assembly.GetExecutingAssembly();
@@ -75,7 +75,7 @@ namespace DataAccess.RESTDataAccess
 		public override Response<T> Execute<T> (IRequest request)
 		{ 
 			SetDataSourceName();
-			return Execute<T> (PrepareRequest<T>(request));
+			return Execute<T> (InitRequest<T>(request));
 		}
 
 		private Response<T> Execute<T>(RestRequest request) where T: new()
@@ -111,7 +111,7 @@ namespace DataAccess.RESTDataAccess
 		public override void ExecuteAsync<T>(IRequest request, Action<Response<T>, IRequest> callback)
 		{
 			SetDataSourceName ();
-			_client.ExecuteAsync<T> (PrepareRequest<T> (request), (response) => {
+			_client.ExecuteAsync<T> (InitRequest<T> (request), (response) => {
 				callback(ProcessResponse((RestResponse<T>)response), request);
 			});
 		}
@@ -198,6 +198,9 @@ namespace DataAccess.RESTDataAccess
 		}
 		#endregion
 
+		/// <summary>
+		/// Sets the RestSharp client BaseUrl according to the DataSourceName property.
+		/// </summary>
 		private void SetDataSourceName()
 		{
 			if (DataSourceName != null)
@@ -207,7 +210,7 @@ namespace DataAccess.RESTDataAccess
 
 		}
 
-		private RestRequest PrepareRequest<T>(IRequest request)
+		private RestRequest InitRequest<T>(IRequest request)
 		{
 			var restRequest = new RestRequest ();
 
@@ -221,7 +224,7 @@ namespace DataAccess.RESTDataAccess
 
 			if (request.DocumentId != null) {
 				// single document 
-				restRequest.Resource = string.Format ("/{0}/{1}/", restRequest.Resource, request.DocumentId);
+				restRequest.Resource = string.Format ("/{0}/{1}/", request.Resource, request.DocumentId);
 				if (request.IfNoneMatch != null)
 					restRequest.AddParameter ("If-None-Match", request.IfNoneMatch, ParameterType.HttpHeader);
 			} else {

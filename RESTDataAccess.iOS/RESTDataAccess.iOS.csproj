@@ -53,8 +53,8 @@
     <Compile Include="..\src\JsonDeserializer.cs">
       <Link>JsonDeserializer.cs</Link>
     </Compile>
-    <Compile Include="..\src\RESTDataReader.cs">
-      <Link>RESTDataReader.cs</Link>
+    <Compile Include="..\src\RESTDataAccess.cs">
+      <Link>RESTDataAccess.cs</Link>
     </Compile>
   </ItemGroup>
 </Project>

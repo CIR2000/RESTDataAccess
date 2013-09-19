@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RESTDataAccess.Mono", "REST
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess.Core", "..\DataAccess\DataAccess.Core\DataAccess.Core.csproj", "{343489EB-B715-41C8-A946-BCFD0BBE1B12}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RESTDataAccess.Tests", "RESTDataAccess.Tests\RESTDataAccess.Tests.csproj", "{4415A311-2508-437A-87C1-F2C666B6F537}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,6 +19,10 @@ Global
 		{343489EB-B715-41C8-A946-BCFD0BBE1B12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{343489EB-B715-41C8-A946-BCFD0BBE1B12}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{343489EB-B715-41C8-A946-BCFD0BBE1B12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4415A311-2508-437A-87C1-F2C666B6F537}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4415A311-2508-437A-87C1-F2C666B6F537}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4415A311-2508-437A-87C1-F2C666B6F537}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4415A311-2508-437A-87C1-F2C666B6F537}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B0441C71-5E54-48D5-AF17-4388909EFE54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B0441C71-5E54-48D5-AF17-4388909EFE54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B0441C71-5E54-48D5-AF17-4388909EFE54}.Release|Any CPU.ActiveCfg = Release|Any CPU
