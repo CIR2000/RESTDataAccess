@@ -1,15 +1,26 @@
+using Newtonsoft.Json;
 using System;
 using System.Net;
 using System.Text;
 using System.Reflection;
 using System.Globalization;
+using System.Collections;
 using System.Collections.Generic;
 using DataAccess;
 using RestSharp;
 using RestSharp.Extensions;
+using System.Runtime.Serialization.Json;
 
 namespace DataAccess.RESTDataAccess
 {
+//  WIP
+//	public class ErrReponse
+//	{
+//		public ErrReponse () { }
+//		public string Status { get; set; }
+//		public List<string> Issues { get; set; }
+//	}
+
 	public class RESTDataAccess : DataAccessBase
 	{
 		/// <summary>
@@ -75,7 +86,19 @@ namespace DataAccess.RESTDataAccess
 		public override Response<T> Execute<T> (IRequest request)
 		{ 
 			SetDataSourceName();
-			return Execute<T> (InitRequest<T>(request));
+
+			var r = InitRequest<T> (request);
+			switch (r.Method) {
+			case Method.GET:
+				break;
+			case Method.POST:
+				r.RequestFormat = DataFormat.Json;
+				r.AddParameter("application/json; charset=utf-8", 
+				               PayloadToJson (request.Payload),
+				               ParameterType.RequestBody);
+ 				break;
+			}
+			return Execute<T> (r);
 		}
 
 		private Response<T> Execute<T>(RestRequest request) where T: new()
@@ -222,6 +245,18 @@ namespace DataAccess.RESTDataAccess
 			else if (Authentication != null) 
 				_client.Authenticator = new HttpBasicAuthenticator (Authentication.UserName, Authentication.Password);
 
+			switch (request.Method)
+			{
+			case Methods.Read:
+				restRequest.Method = Method.GET;
+				break;
+			case Methods.Create:
+				restRequest.Method = Method.POST;
+				break;
+			default:
+				throw new NotImplementedException ();
+			}
+
 			if (request.DocumentId != null) {
 				// single document 
 				restRequest.Resource = string.Format ("/{0}/{1}/", request.Resource, request.DocumentId);
@@ -243,15 +278,27 @@ namespace DataAccess.RESTDataAccess
 			if (request.IfModifiedSince != null)
 				restRequest.AddParameter ("If-Modified-Since", request.IfModifiedSince, ParameterType.HttpHeader);
 
-			switch (request.Method)
-			{
-			case Methods.Read:
-				restRequest.Method = Method.GET;
-				break;
-			default:
-				throw new NotImplementedException ();
-			}
 			return restRequest;
+		}
+
+		/// <summary>
+		/// Payloads to json.
+		/// </summary>
+		/// <returns>The json representation of the payload.</returns>
+		/// <param name="payload">The POST payload.</param>
+		/// <typeparam name="T">The 1st type parameter.</typeparam>
+		private string PayloadToJson (object payload)
+		{
+			if (!(payload.GetType ().IsGenericType && payload is IEnumerable))
+				throw new ArgumentException ("The payload must be a IEnumerable.");
+
+			var json = new StringBuilder ();
+			var i = 0;
+			foreach (object o in ((IEnumerable)payload)) {
+				var item = JsonConvert.SerializeObject (o);
+				json.AppendFormat (@"""item{0}"": {1},", ++i, item);
+			}
+			return string.Format (@"{{{0}}}", json.ToString ().TrimEnd (','));
 		}
 
 		private Response<T> ProcessResponse<T>(RestResponse<T> restResponse)
