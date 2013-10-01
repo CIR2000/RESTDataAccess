@@ -13,14 +13,6 @@ using System.Runtime.Serialization.Json;
 
 namespace DataAccess.RESTDataAccess
 {
-//  WIP
-//	public class ErrReponse
-//	{
-//		public ErrReponse () { }
-//		public string Status { get; set; }
-//		public List<string> Issues { get; set; }
-//	}
-
 	public class RESTDataAccess : DataAccessBase
 	{
 		/// <summary>
@@ -98,30 +90,25 @@ namespace DataAccess.RESTDataAccess
 				               ParameterType.RequestBody);
  				break;
 			}
-			return Execute<T> (r);
-		}
 
-		private Response<T> Execute<T>(RestRequest request) where T: new()
-		{
 			// TODO Make sure this is still needed, or how Exceptions should be handled.
-			request.OnBeforeDeserialization = (resp) =>
+			r.OnBeforeDeserialization = (resp) =>
 				{
 					// for individual resources when there's an error to make
 					// sure that RestException props are populated
-//					if (((int)resp.StatusCode) >= 400)
-//					{
-//						// have to read the bytes so .Content doesn't get populated
-//	                    string restException = "{{ \"RestException\" : {0} }}";
-//						var content = resp.RawBytes.AsString(); //get the response content
-//	                    var newJson = string.Format(restException, content);
-//
-//	                    resp.Content = null;
-//						resp.RawBytes = Encoding.UTF8.GetBytes(newJson.ToString());
-//					}
+					if (((int)resp.StatusCode) >= 400)
+					{
+						// have to read the bytes so .Content doesn't get populated
+	                    string restException = "{{ \"RestException\" : {0} }}";
+						var content = resp.RawBytes.AsString(); //get the response content
+	                    var newJson = string.Format(restException, content);
+
+	                    resp.Content = null;
+						resp.RawBytes = Encoding.UTF8.GetBytes(newJson.ToString());
+					}
 				};
 
-			SetDataSourceName ();
-			return ProcessResponse ((RestResponse<T>)_client.Execute<T> (request));
+			return ProcessResponse ((RestResponse<T>)_client.Execute<T> (r));
 		}
 
 		#endregion
